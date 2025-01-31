@@ -8,7 +8,7 @@ pipeline {
         DOCKER_HUB_CREDENTIALS = 'dockerhub_credentials_id'
         IMAGE_TAG = 'latest'
         SSH_CREDENTIALS_ID = 'SSH_CREDENTIALS_ID'
-        REPO_URL = 'https://github.com/theitern/3-tier-application.git'
+        REPO_URL = 'https://github.com/github_credentials_id/3-tier-application.git'
     }
 
     tools {
@@ -20,10 +20,10 @@ pipeline {
         stage('Clone Repository') {
             steps {
                 echo 'Cloning repository..'
-                withCredentials([usernamePassword(credentialsId: 'theitern', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+                withCredentials([usernamePassword(credentialsId: 'github_credentials_id', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
                     script {
                         sh "rm -rf ${env.WORKSPACE}/3-tier-application"
-                        git credentialsId: 'theitern', url: env.REPO_URL, branch: 'main', dir: '${env.WORKSPACE}/3-tier-application'
+                        git credentialsId: 'github_credentials_id', url: env.REPO_URL, branch: 'main', dir: '${env.WORKSPACE}/3-tier-application'
                     }
                 }
             }
@@ -69,13 +69,13 @@ pipeline {
             }
         }
 
-        stage('Copy WAR to Docker Server') {
+        stage('Copy JAR to Docker Server') {
             steps {
-                echo 'Copying WAR to Docker Server..'
+                echo 'Copying JAR to Docker Server..'
                 sshagent(credentials: [env.SSH_CREDENTIALS_ID]) {
                     sh """
-                        ssh -o StrictHostKeyChecking=no ${env.DOCKER_USER}@${env.DOCKER_SERVER} 'rm -f /home/ubuntu/webapp.war'
-                        scp -o StrictHostKeyChecking=no ${env.WORKSPACE}/3-tier-application/webapp/target/webapp.war ${env.DOCKER_USER}@${env.DOCKER_SERVER}:/home/ubuntu/
+                        ssh -o StrictHostKeyChecking=no ${env.DOCKER_USER}@${env.DOCKER_SERVER} 'rm -f /home/ubuntu/app.jar'
+                        scp -o StrictHostKeyChecking=no ${env.WORKSPACE}/3-tier-application/target/*.jar ${env.DOCKER_USER}@${env.DOCKER_SERVER}:/home/ubuntu/app.jar
                     """
                 }
             }
