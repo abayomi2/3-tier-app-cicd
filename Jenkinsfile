@@ -22,10 +22,8 @@ pipeline {
                 echo 'Cloning repository..'
                 withCredentials([usernamePassword(credentialsId: 'theitern', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
                     script {
-                        // Remove existing repository clone if present
-                        sh "rm -rf /var/lib/jenkins/workspace/cicd-pipeline/devops-basics"
-                        // Clone repository to /var/lib/jenkins/workspace/cicd-pipeline/devops-basics
-                        git credentialsId: 'theitern', url: env.REPO_URL, branch: 'master', dir: '/var/lib/jenkins/workspace/cicd-pipeline/devops-basics'
+                        sh "rm -rf ${env.WORKSPACE}/3-tier-application"
+                        git credentialsId: 'theitern', url: env.REPO_URL, branch: 'main', dir: '${env.WORKSPACE}/3-tier-application'
                     }
                 }
             }
@@ -34,14 +32,18 @@ pipeline {
         stage('Compile') {
             steps {
                 echo 'Compiling..'
-                sh 'mvn compile'
+                dir('${env.WORKSPACE}/3-tier-application') {
+                    sh 'mvn compile'
+                }
             }
         }
 
         stage('Package') {
             steps {
                 echo 'Packaging..'
-                sh 'mvn package'
+                dir('${env.WORKSPACE}/3-tier-application') {
+                    sh 'mvn package'
+                }
             }
         }
 
@@ -73,4 +75,56 @@ pipeline {
                 sshagent(credentials: [env.SSH_CREDENTIALS_ID]) {
                     sh """
                         ssh -o StrictHostKeyChecking=no ${env.DOCKER_USER}@${env.DOCKER_SERVER} 'rm -f /home/ubuntu/webapp.war'
-                        scp -o StrictHostKeyChecking=no /var/lib/jenkins/workspace/${env.JOB_NAME}/webapp/target/webapp.war ${env.DOCKER_USER}@${env.D
+                        scp -o StrictHostKeyChecking=no ${env.WORKSPACE}/3-tier-application/webapp/target/webapp.war ${env.DOCKER_USER}@${env.DOCKER_SERVER}:/home/ubuntu/
+                    """
+                }
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                echo 'Building Docker Image..'
+                sshagent(credentials: [env.SSH_CREDENTIALS_ID]) {
+                    sh """
+                        scp -o StrictHostKeyChecking=no -r ${env.WORKSPACE}/3-tier-application/* ${env.DOCKER_USER}@${env.DOCKER_SERVER}:/home/ubuntu
+                        ssh -o StrictHostKeyChecking=no ${env.DOCKER_USER}@${env.DOCKER_SERVER} 'ls -la && docker build -t ${env.DOCKER_HUB_REPO}:${env.IMAGE_TAG} .'
+                    """
+                }
+            }
+        }
+        
+        stage('Push Docker Image') {
+            steps {
+                echo 'Pushing Docker Image..'
+                sshagent(credentials: [env.SSH_CREDENTIALS_ID]) {
+                    withCredentials([usernamePassword(credentialsId: env.DOCKER_HUB_CREDENTIALS, usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
+                        sh """
+                            ssh -o StrictHostKeyChecking=no ${env.DOCKER_USER}@${env.DOCKER_SERVER} 'echo ${DOCKER_PASSWORD} | docker login -u $DOCKER_USERNAME --password-stdin'
+                            ssh -o StrictHostKeyChecking=no ${env.DOCKER_USER}@${env.DOCKER_SERVER} 'docker push ${env.DOCKER_HUB_REPO}:${env.IMAGE_TAG}'
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Run Docker Image') {
+            steps {
+                echo 'Running Docker Image..'
+                sshagent(credentials: [env.SSH_CREDENTIALS_ID]) {
+                    sh """
+                        ssh -o StrictHostKeyChecking=no ${env.DOCKER_USER}@${env.DOCKER_SERVER} 'sudo docker run -d --name our_app_container -p 8080:8080 ${env.DOCKER_HUB_REPO}:${env.IMAGE_TAG}'
+                    """
+                }
+            }
+        } 
+    }
+
+    post {
+        success {
+            echo 'Pipeline succeeded!'
+        }
+        failure {
+            echo 'Pipeline failed!'
+        }
+    }
+}
