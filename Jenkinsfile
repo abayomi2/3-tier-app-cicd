@@ -8,7 +8,7 @@ pipeline {
         DOCKER_HUB_CREDENTIALS = 'dockerhub_credentials_id'
         IMAGE_TAG = 'latest'
         SSH_CREDENTIALS_ID = 'SSH_CREDENTIALS_ID'
-        REPO_URL = 'https://github.com/github_credentials_id/3-tier-application.git'
+        REPO_URL = 'https://github.com/theitern/3-tier-application.git'
     }
 
     tools {
