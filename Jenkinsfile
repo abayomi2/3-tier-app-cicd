@@ -23,8 +23,16 @@ pipeline {
                 withCredentials([usernamePassword(credentialsId: 'github_credentials_id', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
                     script {
                         sh "rm -rf ${env.WORKSPACE}/3-tier-application"
-                        git credentialsId: 'github_credentials_id', url: env.REPO_URL, branch: 'main', dir: '${env.WORKSPACE}/3-tier-application'
+                        git credentialsId: 'github_credentials_id', url: env.REPO_URL, branch: 'main'
                     }
+                }
+            }
+        }
+
+        stage('Verify Repository') {
+            steps {
+                script {
+                    sh "ls -la ${env.WORKSPACE}/3-tier-application"
                 }
             }
         }
@@ -32,7 +40,7 @@ pipeline {
         stage('Compile') {
             steps {
                 echo 'Compiling..'
-                dir('${env.WORKSPACE}/3-tier-application') {
+                dir('3-tier-application') {
                     sh 'mvn compile'
                 }
             }
@@ -41,7 +49,7 @@ pipeline {
         stage('Package') {
             steps {
                 echo 'Packaging..'
-                dir('${env.WORKSPACE}/3-tier-application') {
+                dir('3-tier-application') {
                     sh 'mvn package'
                 }
             }
