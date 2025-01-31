@@ -22,7 +22,7 @@ pipeline {
                 echo 'Cloning repository..'
                 withCredentials([usernamePassword(credentialsId: 'github_credentials_id', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
                     script {
-                        sh "rm -rf ${env.WORKSPACE}/3-tier-application"
+                        sh "rm -rf \"${env.WORKSPACE}/3-tier-application\""
                         git credentialsId: 'github_credentials_id', url: env.REPO_URL, branch: 'main'
                     }
                 }
@@ -32,7 +32,8 @@ pipeline {
         stage('Verify Repository') {
             steps {
                 script {
-                    sh "ls -la ${env.WORKSPACE}/3-tier-application"
+                    echo "Workspace path: ${env.WORKSPACE}"
+                    sh "ls -la \"${env.WORKSPACE}/3-tier-application\""
                 }
             }
         }
@@ -83,7 +84,7 @@ pipeline {
                 sshagent(credentials: [env.SSH_CREDENTIALS_ID]) {
                     sh """
                         ssh -o StrictHostKeyChecking=no ${env.DOCKER_USER}@${env.DOCKER_SERVER} 'rm -f /home/ubuntu/app.jar'
-                        scp -o StrictHostKeyChecking=no ${env.WORKSPACE}/3-tier-application/target/*.jar ${env.DOCKER_USER}@${env.DOCKER_SERVER}:/home/ubuntu/app.jar
+                        scp -o StrictHostKeyChecking=no "${env.WORKSPACE}/3-tier-application/target/*.jar" ${env.DOCKER_USER}@${env.DOCKER_SERVER}:/home/ubuntu/app.jar
                     """
                 }
             }
@@ -94,7 +95,7 @@ pipeline {
                 echo 'Building Docker Image..'
                 sshagent(credentials: [env.SSH_CREDENTIALS_ID]) {
                     sh """
-                        scp -o StrictHostKeyChecking=no -r ${env.WORKSPACE}/3-tier-application/* ${env.DOCKER_USER}@${env.DOCKER_SERVER}:/home/ubuntu
+                        scp -o StrictHostKeyChecking=no -r "${env.WORKSPACE}/3-tier-application/*" ${env.DOCKER_USER}@${env.DOCKER_SERVER}:/home/ubuntu
                         ssh -o StrictHostKeyChecking=no ${env.DOCKER_USER}@${env.DOCKER_SERVER} 'ls -la && docker build -t ${env.DOCKER_HUB_REPO}:${env.IMAGE_TAG} .'
                     """
                 }
