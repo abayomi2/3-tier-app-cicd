@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_SERVER = '18.235.207.184'
+        DOCKER_SERVER = '44.214.210.188'
         DOCKER_USER = 'ubuntu'
         DOCKER_HUB_REPO = 'akinaregbesola/class_images'
         DOCKER_HUB_CREDENTIALS = 'dockerhub_credentials_id'
@@ -22,18 +22,9 @@ pipeline {
                 echo 'Cloning repository..'
                 withCredentials([usernamePassword(credentialsId: 'github_credentials_id', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
                     script {
-                        sh "rm -rf \"${env.WORKSPACE}/3-tier-application\""
-                        git credentialsId: 'github_credentials_id', url: env.REPO_URL, branch: 'main'
+                        sh "rm -rf ${WORKSPACE}/devops-basics"
+                        git credentialsId: 'github_credentials_id', url: env.REPO_URL, branch: 'master'
                     }
-                }
-            }
-        }
-
-        stage('Verify Repository') {
-            steps {
-                script {
-                    echo "Workspace path: ${env.WORKSPACE}"
-                    sh "ls -la \"${env.WORKSPACE}/3-tier-application\""
                 }
             }
         }
@@ -41,18 +32,14 @@ pipeline {
         stage('Compile') {
             steps {
                 echo 'Compiling..'
-                dir('3-tier-application') {
-                    sh 'mvn compile'
-                }
+                sh 'mvn compile'
             }
         }
 
         stage('Package') {
             steps {
                 echo 'Packaging..'
-                dir('3-tier-application') {
-                    sh 'mvn package'
-                }
+                sh 'mvn package'
             }
         }
 
@@ -65,27 +52,36 @@ pipeline {
                             script: "ssh -o StrictHostKeyChecking=no ${env.DOCKER_USER}@${env.DOCKER_SERVER} 'docker ps -aq'",
                             returnStdout: true
                         ).trim()
-                        
+
                         if (containerIds) {
                             sh "ssh -o StrictHostKeyChecking=no ${env.DOCKER_USER}@${env.DOCKER_SERVER} 'docker rm -f ${containerIds}'"
                         } else {
                             echo "No containers to remove."
                         }
-                        
+
                         sh "ssh -o StrictHostKeyChecking=no ${env.DOCKER_USER}@${env.DOCKER_SERVER} 'yes | docker system prune --all'"
                     }
                 }
             }
         }
 
-        stage('Copy JAR to Docker Server') {
+        stage('Find and Copy Artifact to Docker Server') {
             steps {
-                echo 'Copying JAR to Docker Server..'
-                sshagent(credentials: [env.SSH_CREDENTIALS_ID]) {
-                    sh """
-                        ssh -o StrictHostKeyChecking=no ${env.DOCKER_USER}@${env.DOCKER_SERVER} 'rm -f /home/ubuntu/app.jar'
-                        scp -o StrictHostKeyChecking=no "${env.WORKSPACE}/3-tier-application/target/*.jar" ${env.DOCKER_USER}@${env.DOCKER_SERVER}:/home/ubuntu/app.jar
-                    """
+                echo 'Finding and Copying Artifact to Docker Server..'
+                script {
+                    def artifactPath = sh(
+                        script: "find /var/lib/jenkins/workspace -type f \\(-name '*.war' -o -name '*.jar'\\) | head -n 1",
+                        returnStdout: true
+                    ).trim()
+
+                    if (artifactPath) {
+                        echo "Found artifact: ${artifactPath}"
+                        sshagent(credentials: [env.SSH_CREDENTIALS_ID]) {
+                            sh "scp -o StrictHostKeyChecking=no ${artifactPath} ${env.DOCKER_USER}@${env.DOCKER_SERVER}:/home/ubuntu/"
+                        }
+                    } else {
+                        error "No artifact found in /var/lib/jenkins/workspace"
+                    }
                 }
             }
         }
@@ -95,13 +91,13 @@ pipeline {
                 echo 'Building Docker Image..'
                 sshagent(credentials: [env.SSH_CREDENTIALS_ID]) {
                     sh """
-                        scp -o StrictHostKeyChecking=no -r "${env.WORKSPACE}/3-tier-application/*" ${env.DOCKER_USER}@${env.DOCKER_SERVER}:/home/ubuntu
+                        scp -o StrictHostKeyChecking=no -r ${WORKSPACE}/* ${env.DOCKER_USER}@${env.DOCKER_SERVER}:/home/ubuntu
                         ssh -o StrictHostKeyChecking=no ${env.DOCKER_USER}@${env.DOCKER_SERVER} 'ls -la && docker build -t ${env.DOCKER_HUB_REPO}:${env.IMAGE_TAG} .'
                     """
                 }
             }
         }
-        
+
         stage('Push Docker Image') {
             steps {
                 echo 'Pushing Docker Image..'
@@ -125,7 +121,7 @@ pipeline {
                     """
                 }
             }
-        } 
+        }
     }
 
     post {
