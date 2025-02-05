@@ -23,7 +23,7 @@ pipeline {
                 withCredentials([usernamePassword(credentialsId: 'github_credentials_id', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
                     script {
                         sh "rm -rf ${WORKSPACE}/devops-basics"
-                        git credentialsId: 'github_credentials_id', url: env.REPO_URL, branch: 'master'
+                        git credentialsId: 'github_credentials_id', url: env.REPO_URL, branch: 'main'
                     }
                 }
             }
