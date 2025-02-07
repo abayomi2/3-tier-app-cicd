@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_SERVER = '44.214.210.188'
+        DOCKER_SERVER = '35.168.201.169'
         DOCKER_USER = 'ubuntu'
         DOCKER_HUB_REPO = 'akinaregbesola/class_images'
         DOCKER_HUB_CREDENTIALS = 'dockerhub_credentials_id'
@@ -22,8 +22,8 @@ pipeline {
                 echo 'Cloning repository..'
                 withCredentials([usernamePassword(credentialsId: 'github_credentials_id', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
                     script {
-                        sh "rm -rf ${WORKSPACE}/devops-basics"
-                        git credentialsId: 'github_credentials_id', url: env.REPO_URL, branch: 'main'
+                        sh "rm -rf ${WORKSPACE}/3-tier-application"
+                        git credentialsId: 'github_credentials_id', url: env.REPO_URL, branch: 'master'
                     }
                 }
             }
@@ -52,36 +52,27 @@ pipeline {
                             script: "ssh -o StrictHostKeyChecking=no ${env.DOCKER_USER}@${env.DOCKER_SERVER} 'docker ps -aq'",
                             returnStdout: true
                         ).trim()
-
+                        
                         if (containerIds) {
                             sh "ssh -o StrictHostKeyChecking=no ${env.DOCKER_USER}@${env.DOCKER_SERVER} 'docker rm -f ${containerIds}'"
                         } else {
                             echo "No containers to remove."
                         }
-
+                        
                         sh "ssh -o StrictHostKeyChecking=no ${env.DOCKER_USER}@${env.DOCKER_SERVER} 'yes | docker system prune --all'"
                     }
                 }
             }
         }
 
-        stage('Find and Copy Artifact to Docker Server') {
+        stage('Copy JAR to Docker Server') {
             steps {
-                echo 'Finding and Copying Artifact to Docker Server..'
-                script {
-                    def artifactPath = sh(
-                        script: "find /var/lib/jenkins/workspace -type f \\(-name '*.war' -o -name '*.jar'\\) | head -n 1",
-                        returnStdout: true
-                    ).trim()
-
-                    if (artifactPath) {
-                        echo "Found artifact: ${artifactPath}"
-                        sshagent(credentials: [env.SSH_CREDENTIALS_ID]) {
-                            sh "scp -o StrictHostKeyChecking=no ${artifactPath} ${env.DOCKER_USER}@${env.DOCKER_SERVER}:/home/ubuntu/"
-                        }
-                    } else {
-                        error "No artifact found in /var/lib/jenkins/workspace"
-                    }
+                echo 'Copying JAR to Docker Server..'
+                sshagent(credentials: [env.SSH_CREDENTIALS_ID]) {
+                    sh """
+                        ssh -o StrictHostKeyChecking=no ${env.DOCKER_USER}@${env.DOCKER_SERVER} 'rm -f /home/ubuntu/app.jar'
+                        scp -o StrictHostKeyChecking=no /var/lib/jenkins/workspace/tier4/target/spring-petclinic-3.4.0-SNAPSHOT.jar ${env.DOCKER_USER}@${env.DOCKER_SERVER}:/home/ubuntu/app.jar
+                    """
                 }
             }
         }
