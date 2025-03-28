@@ -2,13 +2,13 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_SERVER = '35.168.201.169'
+        DOCKER_SERVER = '100.29.50.7'
         DOCKER_USER = 'ubuntu'
-        DOCKER_HUB_REPO = 'akinaregbesola/class_images'
+        DOCKER_HUB_REPO = 'abayomi2/cici_working'
         DOCKER_HUB_CREDENTIALS = 'dockerhub_credentials_id'
         IMAGE_TAG = 'latest'
         SSH_CREDENTIALS_ID = 'SSH_CREDENTIALS_ID'
-        REPO_URL = 'https://github.com/theitern/3-tier-application.git'
+        REPO_URL = 'https://github.com/abayomi2/3-tier-app-cicd.git'
     }
 
     tools {
