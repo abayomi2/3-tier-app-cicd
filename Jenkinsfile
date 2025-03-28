@@ -7,7 +7,7 @@ pipeline {
         DOCKER_HUB_CREDENTIALS = 'dockerhub_credentials_id'
         IMAGE_TAG = 'latest'
         SSH_CREDENTIALS_ID = 'SSH_CREDENTIALS_ID'
-        REPO_URL = '://github.com/abayomi2/3-tier-app-cicd.git'
+        REPO_URL = 'https://github.com/abayomi2/3-tier-app-cicd.git'
     }
     tools {
         jdk 'myjava'
