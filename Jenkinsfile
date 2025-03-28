@@ -79,7 +79,7 @@ pipeline {
                 sshagent(credentials: ['SSH_CREDENTIALS_ID']) {
                     sh """
                     scp -o StrictHostKeyChecking=no -r ${WORKSPACE}/* ${env.DOCKER_USER}@${env.DOCKER_SERVER}:/home/ubuntu
-                    ssh -o StrictHostKeyChecking=no ${env.DOCKER_USER}@${env.DOCKER_SERVER} 'cd /home/ubuntu && ls -la && docker build -t ${env.DOCKER_HUB_REPO}:${env.IMAGE_TAG} .'"
+                    ssh -o StrictHostKeyChecking=no ${env.DOCKER_USER}@${env.DOCKER_SERVER} 'cd /home/ubuntu && ls -la && docker build -t ${env.DOCKER_HUB_REPO}:${env.IMAGE_TAG} .'
                     """
                 }
             }
