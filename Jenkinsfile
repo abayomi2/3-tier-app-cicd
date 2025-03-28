@@ -66,7 +66,7 @@ pipeline {
                 echo 'Copying JAR to Docker Server..'
                 sshagent(credentials: ['SSH_CREDENTIALS_ID']) {
                     sh """
-                    ssh -o StrictHosthttpsKeyChecking=no ${env.DOCKER_USER}@${env.DOCKER_SERVER} 'rm -f /home/ubuntu/app.jar'
+                    ssh -o StrictHostKeyChecking=no ${env.DOCKER_USER}@${env.DOCKER_SERVER} 'rm -f /home/ubuntu/app.jar'
                     scp -o StrictHostKeyChecking=no ${WORKSPACE}/target/*.jar ${env.DOCKER_USER}@${env.DOCKER_SERVER}:/home/ubuntu/app.jar
                     """
                 }
